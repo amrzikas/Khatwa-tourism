@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "Destination": {
+      "title": "Destination",
+      "description": "A travel destination like Sharm El Sheikh or Hurghada",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "country": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "image": { "type": "string", "maxLength": 2048 }
+      },
+      "required": ["id", "name", "country", "description", "image"]
+    },
+    "Hotel": {
+      "title": "Hotel",
+      "description": "A luxury resort or hotel within a destination",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "destinationId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "stars": { "type": "integer" },
+        "description": { "type": "string", "maxLength": 2000 },
+        "mainFeatures": {
+          "type": "array"
+        },
+        "images": {
+          "type": "array"
+        },
+        "locationName": { "type": "string", "maxLength": 300 },
+        "locationMapUrl": { "type": "string", "maxLength": 2048 },
+        "roomTypes": {
+          "type": "array"
+        },
+        "accommodationTypes": {
+          "type": "array"
+        },
+        "childPolicy": { "type": "string", "maxLength": 2000 },
+        "transfers": {
+          "type": "object",
+          "properties": {
+            "policy": { "type": "string", "maxLength": 1000 },
+            "price": { "type": "number" },
+            "isAvailable": { "type": "boolean" }
+          },
+          "required": ["policy", "price", "isAvailable"]
+        },
+        "availabilityPeriods": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "destinationId",
+        "name",
+        "stars",
+        "description",
+        "mainFeatures",
+        "images",
+        "locationName",
+        "locationMapUrl",
+        "roomTypes",
+        "accommodationTypes",
+        "childPolicy",
+        "transfers",
+        "availabilityPeriods"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Metadata of registered administrators",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["uid", "email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "destinations": {
+      "schema": "Destination",
+      "description": "Collection of holiday destinations"
+    },
+    "hotels": {
+      "schema": "Hotel",
+      "description": "Collection of hotels and resorts"
+    },
+    "admins": {
+      "schema": "AdminUser",
+      "description": "Collection of registered administrator metadata"
+    }
+  }
+}

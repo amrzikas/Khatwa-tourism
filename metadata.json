@@ -1,0 +1,6 @@
+{
+  "name": "Khatwa - خطوة للسياحة",
+  "description": "Khatwa (خطوة للسياحة) - A professional tourism portal with multi-language support (English/Arabic) allowing users to explore destinations, hotels, and travel details, along with a secure administrator dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

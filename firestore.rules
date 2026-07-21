@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- REUSABLE SECURITY PRIMITIVES ---
+    function isValidId(id) { 
+      return id is string && id.size() <= 128; 
+    }
+    
+    function incoming() { 
+      return request.resource.data; 
+    }
+    
+    function existing() { 
+      return resource.data; 
+    }
+    
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+    
+    function isAdmin() { 
+      return isSignedIn() 
+        && (request.auth.token.email == "amrzikas20@gmail.com" 
+            || request.auth.token.email == "AmrZikas20@gmail.com" 
+            || request.auth.token.email == "admin@rayahati.com"
+            || request.auth.token.email == "ADMIN@RAYAHATI.COM"); 
+    }
+
+    // --- ENTITY SCHEMA VALIDATION BLUEPRINTS ---
+    
+    function isValidDestination(data) {
+      return data.keys().hasAll(['id', 'name', 'country', 'description', 'image'])
+        && data.keys().size() == 5
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 1000
+        && data.country is string && data.country.size() <= 1000
+        && data.description is string && data.description.size() <= 10000
+        && data.image is string && data.image.size() <= 5000;
+    }
+
+    function isValidHotel(data) {
+      return data.keys().hasAll([
+        'id', 'destinationId', 'name', 'stars', 'description', 'mainFeatures',
+        'images', 'locationName', 'locationMapUrl', 'roomTypes', 'accommodationTypes',
+        'childPolicy', 'transfers', 'availabilityPeriods'
+      ])
+        && data.keys().size() == 14
+        && data.id is string && data.id.size() <= 128
+        && data.destinationId is string && data.destinationId.size() <= 128
+        && data.name is string && data.name.size() <= 1000
+        && data.stars is int && data.stars >= 1 && data.stars <= 5
+        && data.description is string && data.description.size() <= 10000
+        && data.mainFeatures is list && data.mainFeatures.size() <= 100
+        && data.images is list && data.images.size() <= 50
+        && data.locationName is string && data.locationName.size() <= 1000
+        && data.locationMapUrl is string && data.locationMapUrl.size() <= 5000
+        && data.roomTypes is list && data.roomTypes.size() <= 50
+        && data.accommodationTypes is list && data.accommodationTypes.size() <= 50
+        && data.childPolicy is string && data.childPolicy.size() <= 10000
+        && data.transfers is map
+        && data.transfers.policy is string && data.transfers.policy.size() <= 5000
+        && (data.transfers.price is int || data.transfers.price is float)
+        && data.transfers.isAvailable is bool
+        && data.availabilityPeriods is list && data.availabilityPeriods.size() <= 100;
+    }
+
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt'])
+        && data.keys().size() == 3
+        && data.uid is string && data.uid.size() <= 128
+        && data.email is string && data.email.size() <= 200
+        && data.createdAt is string && data.createdAt.size() <= 100;
+    }
+
+    // --- COLLECTION RULES ---
+
+    // 1. Destinations Collection
+    match /destinations/{destId} {
+      allow get: if isValidId(destId);
+      allow list: if true; // Public read
+      
+      allow create: if isAdmin() 
+        && isValidId(destId) 
+        && isValidDestination(incoming()) 
+        && incoming().id == destId;
+        
+      allow update: if isAdmin() 
+        && isValidId(destId) 
+        && isValidDestination(incoming()) 
+        && incoming().id == destId
+        && incoming().id == existing().id
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'country', 'description', 'image']);
+        
+      allow delete: if isAdmin() 
+        && isValidId(destId);
+    }
+
+    // 2. Hotels Collection
+    match /hotels/{hotelId} {
+      allow get: if isValidId(hotelId);
+      allow list: if true; // Public read
+      
+      allow create: if isAdmin() 
+        && isValidId(hotelId) 
+        && isValidHotel(incoming()) 
+        && incoming().id == hotelId 
+        && exists(/databases/$(database)/documents/destinations/$(incoming().destinationId));
+        
+      allow update: if isAdmin() 
+        && isValidId(hotelId) 
+        && isValidHotel(incoming()) 
+        && incoming().id == hotelId
+        && incoming().id == existing().id
+        && incoming().destinationId == existing().destinationId
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'stars', 'description', 'mainFeatures', 'images', 'locationName',
+          'locationMapUrl', 'roomTypes', 'accommodationTypes', 'childPolicy', 'transfers', 'availabilityPeriods'
+        ]);
+        
+      allow delete: if isAdmin() 
+        && isValidId(hotelId);
+    }
+
+    // 3. Admins Collection
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      
+      allow create: if isSignedIn()
+        && request.auth.uid == adminId
+        && isValidId(adminId)
+        && isValidAdmin(incoming())
+        && incoming().uid == adminId
+        && incoming().email == request.auth.token.email;
+    }
+  }
+}
