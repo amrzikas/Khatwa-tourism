@@ -294,15 +294,15 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel, destinationName, lang }) =
                         <th className={`px-4 py-3 ${lang === "en" ? "text-left" : "text-right"}`}>
                           {lang === "ar" ? "تاريخ الفترة" : "Period Dates"}
                         </th>
-                        <th className="px-4 py-3 text-center">
-                          {lang === "ar" ? "فردي" : "Single"}
-                        </th>
-                        <th className="px-4 py-3 text-center">
-                          {lang === "ar" ? "ثنائية" : "Double"}
-                        </th>
-                        <th className="px-4 py-3 text-center">
-                          {lang === "ar" ? "ثلاثية" : "Triple"}
-                        </th>
+                        {(hotel.roomTypes && hotel.roomTypes.length > 0 ? hotel.roomTypes : [
+                          { id: "single", name: lang === "ar" ? "فردي" : "Single", pricePerNight: 0, maxOccupancy: "" },
+                          { id: "double", name: lang === "ar" ? "ثنائية" : "Double", pricePerNight: 0, maxOccupancy: "" },
+                          { id: "triple", name: lang === "ar" ? "ثلاثية" : "Triple", pricePerNight: 0, maxOccupancy: "" }
+                        ]).map((rt) => (
+                          <th key={rt.id} className="px-4 py-3 text-center whitespace-nowrap">
+                            {translateText(rt.name, lang)}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -320,27 +320,39 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel, destinationName, lang }) =
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-center font-mono font-bold">
-                            {period.singleAvailable ? (
-                              <span className="text-emerald-600">{period.singlePrice.toLocaleString()} {t.currencySymbol}</span>
-                            ) : (
-                              <span className="text-red-500 font-sans font-normal text-xs">{lang === "ar" ? "غير متاح" : "Unavailable"}</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3.5 text-center font-mono font-bold">
-                            {period.doubleAvailable ? (
-                              <span className="text-emerald-600">{period.doublePrice.toLocaleString()} {t.currencySymbol}</span>
-                            ) : (
-                              <span className="text-red-500 font-sans font-normal text-xs">{lang === "ar" ? "غير متاح" : "Unavailable"}</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3.5 text-center font-mono font-bold">
-                            {period.tripleAvailable ? (
-                              <span className="text-emerald-600">{period.triplePrice.toLocaleString()} {t.currencySymbol}</span>
-                            ) : (
-                              <span className="text-red-500 font-sans font-normal text-xs">{lang === "ar" ? "غير متاح" : "Unavailable"}</span>
-                            )}
-                          </td>
+
+                          {(hotel.roomTypes && hotel.roomTypes.length > 0 ? hotel.roomTypes : [
+                            { id: "single", name: "فردي", pricePerNight: 0, maxOccupancy: "" },
+                            { id: "double", name: "ثنائية", pricePerNight: 0, maxOccupancy: "" },
+                            { id: "triple", name: "ثلاثية", pricePerNight: 0, maxOccupancy: "" }
+                          ]).map((rt) => {
+                            const rInfo = period.roomPrices?.[rt.id] || {
+                              price: rt.id === "single" ? period.singlePrice : rt.id === "double" ? period.doublePrice : rt.id === "triple" ? period.triplePrice : 0,
+                              isAvailable: rt.id === "single" ? period.singleAvailable : rt.id === "double" ? period.doubleAvailable : rt.id === "triple" ? period.tripleAvailable : true,
+                              boardType: period.boardType
+                            };
+
+                            const boardText = rInfo.boardType || period.boardType;
+
+                            return (
+                              <td key={rt.id} className="px-4 py-3.5 text-center font-mono">
+                                {rInfo.isAvailable !== false ? (
+                                  <div className="flex flex-col items-center gap-1">
+                                    <span className="font-bold text-emerald-600 text-sm">
+                                      {(rInfo.price ?? 0).toLocaleString()} {t.currencySymbol}
+                                    </span>
+                                    {boardText && (
+                                      <span className="text-[10px] font-semibold text-sky-900 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100/80 leading-tight">
+                                        {translateText(boardText, lang)}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-red-500 font-sans font-normal text-xs">{lang === "ar" ? "غير متاح" : "Unavailable"}</span>
+                                )}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>

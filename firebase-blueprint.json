@@ -78,6 +78,15 @@
         "createdAt": { "type": "string", "maxLength": 100 }
       },
       "required": ["uid", "email", "createdAt"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Global branding and media settings for the site",
+      "type": "object",
+      "properties": {
+        "logoUrl": { "type": "string", "maxLength": 1000000 },
+        "heroBgUrl": { "type": "string", "maxLength": 1000000 }
+      }
     }
   },
   "firestore": {
@@ -92,6 +101,10 @@
     "admins": {
       "schema": "AdminUser",
       "description": "Collection of registered administrator metadata"
+    },
+    "settings": {
+      "schema": "SiteSettings",
+      "description": "Collection of site configurations"
     }
   }
 }

@@ -78,6 +78,11 @@ service cloud.firestore {
         && data.createdAt is string && data.createdAt.size() <= 100;
     }
 
+    function isValidSettings(data) {
+      return (data.logoUrl == null || (data.logoUrl is string && data.logoUrl.size() <= 1000000))
+        && (data.heroBgUrl == null || (data.heroBgUrl is string && data.heroBgUrl.size() <= 1000000));
+    }
+
     // --- COLLECTION RULES ---
 
     // 1. Destinations Collection
@@ -138,6 +143,19 @@ service cloud.firestore {
         && isValidAdmin(incoming())
         && incoming().uid == adminId
         && incoming().email == request.auth.token.email;
+    }
+
+    // 4. Settings Collection
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if true; // Public read
+      
+      allow create, update: if isAdmin()
+        && isValidId(settingId)
+        && isValidSettings(incoming());
+        
+      allow delete: if isAdmin()
+        && isValidId(settingId);
     }
   }
 }

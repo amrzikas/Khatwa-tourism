@@ -11,6 +11,7 @@ interface HeaderProps {
   onOpenLoginModal: () => void;
   lang: Language;
   onLanguageChange: (lang: Language) => void;
+  logoUrl?: string;
 }
 
 export default function Header({
@@ -21,6 +22,7 @@ export default function Header({
   onOpenLoginModal,
   lang,
   onLanguageChange,
+  logoUrl,
 }: HeaderProps) {
   const t = translations[lang];
 
@@ -34,7 +36,7 @@ export default function Header({
           id="logo-container"
         >
           <img 
-            src={khatwaLogo} 
+            src={logoUrl || khatwaLogo} 
             alt="Khatwa Travel - خطوة للسياحة" 
             className="h-14 sm:h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             referrerPolicy="no-referrer"

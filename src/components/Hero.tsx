@@ -8,9 +8,10 @@ interface HeroProps {
   destinationsCount: number;
   hotelsCount: number;
   lang: Language;
+  heroBgUrl?: string;
 }
 
-export default function Hero({ searchTerm, onSearchChange, destinationsCount, hotelsCount, lang }: HeroProps) {
+export default function Hero({ searchTerm, onSearchChange, destinationsCount, hotelsCount, lang, heroBgUrl }: HeroProps) {
   const t = translations[lang];
 
   return (
@@ -18,7 +19,7 @@ export default function Hero({ searchTerm, onSearchChange, destinationsCount, ho
       {/* Absolute background image with premium dark overlay */}
       <div className="absolute inset-0 z-0">
         <img 
-          src="https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1920&q=80" 
+          src={heroBgUrl || "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1920&q=80"} 
           alt="Khatwa Sinai Sea and Mountains" 
           className="w-full h-full object-cover object-center opacity-65 select-none pointer-events-none"
         />

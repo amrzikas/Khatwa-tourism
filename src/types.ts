@@ -30,6 +30,12 @@ export interface TransferPolicy {
   locations?: TransferLocation[];
 }
 
+export interface RoomPriceInfo {
+  price: number;
+  isAvailable: boolean;
+  boardType?: string; // e.g. "Soft All Inclusive", "Half Board (HB)", "Full Board (FB)", "Bed & Breakfast (BB)"
+}
+
 export interface AvailabilityPeriod {
   id: string;
   startDate: string; // "YYYY-MM-DD"
@@ -40,6 +46,8 @@ export interface AvailabilityPeriod {
   singleAvailable: boolean;
   doubleAvailable: boolean;
   tripleAvailable: boolean;
+  boardType?: string; // Default or overall board type for period
+  roomPrices?: Record<string, RoomPriceInfo>;
 }
 
 export interface Hotel {

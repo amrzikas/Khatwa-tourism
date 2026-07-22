@@ -40,6 +40,14 @@ export default function App() {
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Site Branding & Settings state (Synchronized with Firestore doc settings/branding)
+  const [logoUrl, setLogoUrl] = useState<string>(() => {
+    return localStorage.getItem("khatwa_logo_url") || "";
+  });
+  const [heroBgUrl, setHeroBgUrl] = useState<string>(() => {
+    return localStorage.getItem("khatwa_hero_bg_url") || "";
+  });
+
   // Navigation / Views: "client" | "admin"
   const [currentView, setCurrentView] = useState<"client" | "admin">("client");
 
@@ -85,7 +93,30 @@ export default function App() {
       }
     );
 
-    // 3. Real-time Firebase Auth Session Changed
+    // 3. Real-time Site Settings Sync
+    const unsubSettings = onSnapshot(
+      doc(db, "settings", "branding"),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.logoUrl !== undefined) {
+            setLogoUrl(data.logoUrl);
+            if (data.logoUrl) localStorage.setItem("khatwa_logo_url", data.logoUrl);
+            else localStorage.removeItem("khatwa_logo_url");
+          }
+          if (data.heroBgUrl !== undefined) {
+            setHeroBgUrl(data.heroBgUrl);
+            if (data.heroBgUrl) localStorage.setItem("khatwa_hero_bg_url", data.heroBgUrl);
+            else localStorage.removeItem("khatwa_hero_bg_url");
+          }
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, "settings/branding");
+      }
+    );
+
+    // 4. Real-time Firebase Auth Session Changed
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setAdminEmail(user.email);
@@ -99,6 +130,7 @@ export default function App() {
     return () => {
       unsubDests();
       unsubHotels();
+      unsubSettings();
       unsubAuth();
     };
   }, []);
@@ -162,6 +194,21 @@ export default function App() {
       await deleteDoc(doc(db, "hotels", id));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `hotels/${id}`);
+    }
+  };
+
+  const handleUpdateSettings = async (settings: { logoUrl: string; heroBgUrl: string }) => {
+    setLogoUrl(settings.logoUrl);
+    setHeroBgUrl(settings.heroBgUrl);
+    if (settings.logoUrl) localStorage.setItem("khatwa_logo_url", settings.logoUrl);
+    else localStorage.removeItem("khatwa_logo_url");
+    if (settings.heroBgUrl) localStorage.setItem("khatwa_hero_bg_url", settings.heroBgUrl);
+    else localStorage.removeItem("khatwa_hero_bg_url");
+
+    try {
+      await setDoc(doc(db, "settings", "branding"), settings, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, "settings/branding");
     }
   };
 
@@ -235,6 +282,7 @@ export default function App() {
         onOpenLoginModal={() => setIsLoginModalOpen(true)}
         lang={lang}
         onLanguageChange={handleLanguageChange}
+        logoUrl={logoUrl}
       />
 
       {/* 2. Main Content Routing */}
@@ -247,6 +295,7 @@ export default function App() {
             destinationsCount={destinations.length}
             hotelsCount={hotels.length}
             lang={lang}
+            heroBgUrl={heroBgUrl}
           />
 
           {/* Horizontal Destinations Category Bar */}
@@ -390,6 +439,9 @@ export default function App() {
             onAddHotel={handleAddHotel}
             onDeleteHotel={handleDeleteHotel}
             lang={lang}
+            logoUrl={logoUrl}
+            heroBgUrl={heroBgUrl}
+            onUpdateSettings={handleUpdateSettings}
           />
         </main>
       )}

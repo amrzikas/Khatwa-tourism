@@ -20,7 +20,12 @@ import {
   Check,
   AlertCircle,
   Edit,
-  Car
+  Car,
+  Settings,
+  Upload,
+  RotateCcw,
+  Palette,
+  CheckCircle2
 } from "lucide-react";
 
 interface AdminDashboardProps {
@@ -31,6 +36,9 @@ interface AdminDashboardProps {
   onAddHotel: (hotel: Hotel) => void;
   onDeleteHotel: (id: string) => void;
   lang: Language;
+  logoUrl?: string;
+  heroBgUrl?: string;
+  onUpdateSettings?: (settings: { logoUrl: string; heroBgUrl: string }) => void;
 }
 
 export default function AdminDashboard({
@@ -41,10 +49,26 @@ export default function AdminDashboard({
   onAddHotel,
   onDeleteHotel,
   lang,
+  logoUrl,
+  heroBgUrl,
+  onUpdateSettings,
 }: AdminDashboardProps) {
   const t = translations[lang];
-  // Tabs: "destinations" | "hotels"
-  const [activeTab, setActiveTab] = useState<"destinations" | "hotels">("destinations");
+  // Tabs: "destinations" | "hotels" | "settings"
+  const [activeTab, setActiveTab] = useState<"destinations" | "hotels" | "settings">("destinations");
+
+  // Site Settings Form State
+  const [settingsLogo, setSettingsLogo] = useState<string>(logoUrl || "");
+  const [settingsHeroBg, setSettingsHeroBg] = useState<string>(heroBgUrl || "");
+
+  // Sync internal settings state if props change
+  React.useEffect(() => {
+    if (logoUrl !== undefined) setSettingsLogo(logoUrl);
+  }, [logoUrl]);
+
+  React.useEffect(() => {
+    if (heroBgUrl !== undefined) setSettingsHeroBg(heroBgUrl);
+  }, [heroBgUrl]);
 
   // Destination Form State
   const [destName, setDestName] = useState("");
@@ -103,11 +127,21 @@ export default function AdminDashboard({
   const [periodTripleAvailable, setPeriodTripleAvailable] = useState(true);
   const [periodTriplePrice, setPeriodTriplePrice] = useState(200);
 
-  // Dynamic Prices Map per Room Type ID: { [roomTypeId]: { price: number, isAvailable: boolean } }
-  const [periodRoomPrices, setPeriodRoomPrices] = useState<Record<string, { price: number; isAvailable: boolean }>>({
-    single: { price: 100, isAvailable: true },
-    double: { price: 150, isAvailable: true },
-    triple: { price: 200, isAvailable: true }
+  // BOARD TYPE PRESETS
+  const BOARD_TYPE_PRESETS = [
+    { value: "Soft All Inclusive", labelAr: "شامل وجبات ومشروبات (Soft All)", labelEn: "Soft All Inclusive" },
+    { value: "Hard All Inclusive", labelAr: "شامل جميع الوجبات والمشروبات الكحولية (Hard All)", labelEn: "Hard All Inclusive" },
+    { value: "Full Board (FB)", labelAr: "إقامة كاملة - إفطار وغداء وعشاء (FB)", labelEn: "Full Board (FB)" },
+    { value: "Half Board (HB)", labelAr: "نصف إقامة - إفطار وعشاء (HB)", labelEn: "Half Board (HB)" },
+    { value: "Bed & Breakfast (BB)", labelAr: "إفطار فقط (BB)", labelEn: "Bed & Breakfast (BB)" },
+    { value: "Room Only (RO)", labelAr: "بدون وجبات (RO)", labelEn: "Room Only (RO)" }
+  ];
+
+  // Dynamic Prices Map per Room Type ID: { [roomTypeId]: { price: number, isAvailable: boolean, boardType?: string } }
+  const [periodRoomPrices, setPeriodRoomPrices] = useState<Record<string, { price: number; isAvailable: boolean; boardType?: string }>>({
+    single: { price: 100, isAvailable: true, boardType: "Soft All Inclusive" },
+    double: { price: 150, isAvailable: true, boardType: "Soft All Inclusive" },
+    triple: { price: 200, isAvailable: true, boardType: "Soft All Inclusive" }
   });
 
   // Accommodation Options
@@ -400,6 +434,23 @@ export default function AdminDashboard({
         >
           <Building2 className="w-5 h-5" />
           <span>{t.manageHotels} ({hotels.length})</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab("settings");
+            setErrorMsg(null);
+            setSuccessMsg(null);
+          }}
+          className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+            activeTab === "settings"
+              ? "border-sky-600 text-sky-600 bg-sky-50/50 rounded-t-xl"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+          id="tab-settings-btn"
+        >
+          <Palette className="w-5 h-5" />
+          <span>{lang === "ar" ? "إعدادات الهوية والشعار" : "Branding & Media Settings"}</span>
         </button>
       </div>
 
@@ -869,41 +920,78 @@ export default function AdminDashboard({
                   {/* Dynamic Room Prices for ALL Room Types */}
                   <div>
                     <label className="block text-[10px] font-extrabold text-indigo-950 mb-2">
-                      {lang === "ar" ? "أسعار الغرف المتاحة في هذه الفترة (لكل أنواع الغرف بالفندق):" : "Room prices for this period (for all configured room types):"}
+                      {lang === "ar" ? "أسعار الغرف ونوع الإقامة المتاحة في هذه الفترة:" : "Room prices and board types for this period:"}
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                       {hotelRoomTypes.map((rt) => {
-                        const priceInfo = periodRoomPrices[rt.id] || { price: 100, isAvailable: true };
+                        const priceInfo = periodRoomPrices[rt.id] || { price: 100, isAvailable: true, boardType: "Soft All Inclusive" };
                         return (
-                          <div key={rt.id} className="bg-white p-2.5 rounded-xl border border-indigo-100 flex flex-col justify-between space-y-1.5 shadow-2xs">
-                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                          <div key={rt.id} className="bg-white p-3 rounded-2xl border border-indigo-100 flex flex-col justify-between space-y-2 shadow-2xs hover:border-indigo-300 transition-all">
+                            <div className="flex items-center justify-between">
+                              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={priceInfo.isAvailable}
+                                  onChange={(e) => {
+                                    setPeriodRoomPrices({
+                                      ...periodRoomPrices,
+                                      [rt.id]: { ...priceInfo, isAvailable: e.target.checked }
+                                    });
+                                  }}
+                                  className="w-3.5 h-3.5 text-indigo-600 accent-indigo-600 rounded cursor-pointer"
+                                />
+                                <span className="text-xs font-extrabold text-slate-800 line-clamp-1">{rt.name}</span>
+                              </label>
+                            </div>
+
+                            {/* Price input */}
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-500 mb-0.5">
+                                {lang === "ar" ? "السعر المكتوب للفترة:" : "Written price:"}
+                              </label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  disabled={!priceInfo.isAvailable}
+                                  value={priceInfo.price}
+                                  onChange={(e) => {
+                                    setPeriodRoomPrices({
+                                      ...periodRoomPrices,
+                                      [rt.id]: { ...priceInfo, price: Number(e.target.value) || 0 }
+                                    });
+                                  }}
+                                  className="w-full bg-slate-50 disabled:opacity-40 border border-slate-200 rounded-lg p-1.5 text-xs text-center font-bold font-mono text-emerald-700"
+                                />
+                                <span className="text-[10px] font-bold text-slate-400 shrink-0">{t.currencySymbol}</span>
+                              </div>
+                            </div>
+
+                            {/* Board / Accommodation Type for this written price */}
+                            <div className="space-y-1 pt-1.5 border-t border-slate-100">
+                              <label className="block text-[9px] font-bold text-indigo-900">
+                                {lang === "ar" ? "نوع الإقامة لهذا السعر:" : "Board Type for rate:"}
+                              </label>
                               <input
-                                type="checkbox"
-                                checked={priceInfo.isAvailable}
-                                onChange={(e) => {
-                                  setPeriodRoomPrices({
-                                    ...periodRoomPrices,
-                                    [rt.id]: { ...priceInfo, isAvailable: e.target.checked }
-                                  });
-                                }}
-                                className="w-3.5 h-3.5 text-indigo-600 accent-indigo-600 rounded cursor-pointer"
-                              />
-                              <span className="text-[11px] font-bold text-slate-800 line-clamp-1">{rt.name}</span>
-                            </label>
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="number"
+                                type="text"
                                 disabled={!priceInfo.isAvailable}
-                                value={priceInfo.price}
+                                list={`board-presets-${rt.id}`}
+                                value={priceInfo.boardType ?? "Soft All Inclusive"}
+                                placeholder={lang === "ar" ? "اختر أو اكتب نوع الإقامة" : "Select or type board type"}
                                 onChange={(e) => {
                                   setPeriodRoomPrices({
                                     ...periodRoomPrices,
-                                    [rt.id]: { ...priceInfo, price: Number(e.target.value) || 0 }
+                                    [rt.id]: { ...priceInfo, boardType: e.target.value }
                                   });
                                 }}
-                                className="w-full bg-slate-50 disabled:opacity-40 border border-slate-200 rounded-lg p-1 text-xs text-center font-bold font-mono text-emerald-700"
+                                className="w-full bg-slate-50 disabled:opacity-40 border border-slate-200 rounded-lg p-1.5 text-[11px] font-semibold text-slate-800 focus:bg-white focus:ring-1 focus:ring-indigo-500"
                               />
-                              <span className="text-[9px] text-slate-400 shrink-0">{t.currencySymbol}</span>
+                              <datalist id={`board-presets-${rt.id}`}>
+                                {BOARD_TYPE_PRESETS.map((preset, pIdx) => (
+                                  <option key={pIdx} value={preset.value}>
+                                    {lang === "ar" ? preset.labelAr : preset.labelEn}
+                                  </option>
+                                ))}
+                              </datalist>
                             </div>
                           </div>
                         );
@@ -1004,35 +1092,55 @@ export default function AdminDashboard({
                               <td className="px-3 py-2 font-mono whitespace-nowrap">{per.startDate}</td>
                               <td className="px-3 py-2 font-mono whitespace-nowrap">{per.endDate}</td>
                               
-                              {/* Price input for each room type */}
+                              {/* Price input & Board Type for each room type */}
                               {hotelRoomTypes.map((rt) => {
                                 const rp = per.roomPrices?.[rt.id] || {
                                   price: rt.id === "single" ? per.singlePrice : rt.id === "double" ? per.doublePrice : rt.id === "triple" ? per.triplePrice : 0,
-                                  isAvailable: rt.id === "single" ? per.singleAvailable : rt.id === "double" ? per.doubleAvailable : rt.id === "triple" ? per.tripleAvailable : true
+                                  isAvailable: rt.id === "single" ? per.singleAvailable : rt.id === "double" ? per.doubleAvailable : rt.id === "triple" ? per.tripleAvailable : true,
+                                  boardType: per.boardType || "Soft All Inclusive"
                                 };
 
                                 return (
-                                  <td key={rt.id} className="px-3 py-2 text-center font-mono whitespace-nowrap">
+                                  <td key={rt.id} className="px-3 py-2 text-center whitespace-nowrap">
                                     {rp.isAvailable !== false ? (
-                                      <input
-                                        type="number"
-                                        value={rp.price ?? 0}
-                                        onChange={(e) => {
-                                          const val = Number(e.target.value) || 0;
-                                          const updatedPrices = {
-                                            ...(per.roomPrices || {}),
-                                            [rt.id]: { price: val, isAvailable: true }
-                                          };
-                                          setAvailabilityPeriods(availabilityPeriods.map(p => p.id === per.id ? {
-                                            ...p,
-                                            roomPrices: updatedPrices,
-                                            singlePrice: rt.id === "single" ? val : p.singlePrice,
-                                            doublePrice: rt.id === "double" ? val : p.doublePrice,
-                                            triplePrice: rt.id === "triple" ? val : p.triplePrice
-                                          } : p));
-                                        }}
-                                        className="w-16 text-center font-bold text-emerald-600 bg-slate-50 border border-slate-200 rounded p-1 text-xs"
-                                      />
+                                      <div className="flex flex-col items-center gap-1">
+                                        <input
+                                          type="number"
+                                          value={rp.price ?? 0}
+                                          onChange={(e) => {
+                                            const val = Number(e.target.value) || 0;
+                                            const updatedPrices = {
+                                              ...(per.roomPrices || {}),
+                                              [rt.id]: { ...rp, price: val, isAvailable: true }
+                                            };
+                                            setAvailabilityPeriods(availabilityPeriods.map(p => p.id === per.id ? {
+                                              ...p,
+                                              roomPrices: updatedPrices,
+                                              singlePrice: rt.id === "single" ? val : p.singlePrice,
+                                              doublePrice: rt.id === "double" ? val : p.doublePrice,
+                                              triplePrice: rt.id === "triple" ? val : p.triplePrice
+                                            } : p));
+                                          }}
+                                          className="w-16 text-center font-bold text-emerald-600 bg-slate-50 border border-slate-200 rounded p-1 text-xs font-mono"
+                                        />
+                                        <input
+                                          type="text"
+                                          value={rp.boardType || ""}
+                                          placeholder={lang === "ar" ? "نوع الإقامة" : "Board"}
+                                          onChange={(e) => {
+                                            const bVal = e.target.value;
+                                            const updatedPrices = {
+                                              ...(per.roomPrices || {}),
+                                              [rt.id]: { ...rp, boardType: bVal }
+                                            };
+                                            setAvailabilityPeriods(availabilityPeriods.map(p => p.id === per.id ? {
+                                              ...p,
+                                              roomPrices: updatedPrices
+                                            } : p));
+                                          }}
+                                          className="w-24 text-[10px] text-center bg-sky-50/80 border border-sky-200 rounded px-1 py-0.5 text-sky-950 font-semibold"
+                                        />
+                                      </div>
                                     ) : (
                                       <span className="text-slate-400 line-through text-[10px]">N/A</span>
                                     )}
@@ -1050,14 +1158,18 @@ export default function AdminDashboard({
                                       setPeriodEnd(per.endDate);
                                       
                                       // Build periodRoomPrices for editing form
-                                      const pricesMap: Record<string, { price: number; isAvailable: boolean }> = {};
+                                      const pricesMap: Record<string, { price: number; isAvailable: boolean; boardType?: string }> = {};
                                       hotelRoomTypes.forEach(rt => {
                                         if (per.roomPrices && per.roomPrices[rt.id]) {
-                                          pricesMap[rt.id] = per.roomPrices[rt.id];
+                                          pricesMap[rt.id] = {
+                                            price: per.roomPrices[rt.id].price ?? 0,
+                                            isAvailable: per.roomPrices[rt.id].isAvailable !== false,
+                                            boardType: per.roomPrices[rt.id].boardType || per.boardType || "Soft All Inclusive"
+                                          };
                                         } else {
                                           const pr = rt.id === "single" ? per.singlePrice : rt.id === "double" ? per.doublePrice : rt.id === "triple" ? per.triplePrice : 100;
                                           const av = rt.id === "single" ? per.singleAvailable : rt.id === "double" ? per.doubleAvailable : rt.id === "triple" ? per.tripleAvailable : true;
-                                          pricesMap[rt.id] = { price: pr || 0, isAvailable: av !== false };
+                                          pricesMap[rt.id] = { price: pr || 0, isAvailable: av !== false, boardType: per.boardType || "Soft All Inclusive" };
                                         }
                                       });
                                       setPeriodRoomPrices(pricesMap);
@@ -1462,6 +1574,254 @@ export default function AdminDashboard({
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* --- TAB 3: SITE BRANDING & MEDIA SETTINGS --- */}
+      {activeTab === "settings" && (
+        <div className="space-y-8 max-w-5xl mx-auto">
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/60 shadow-sm">
+            <div className="border-b border-slate-100 pb-4 mb-6 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Palette className="w-6 h-6 text-sky-600" />
+                  <span>{lang === "ar" ? "إعدادات الهوية والشعار والصور" : "Site Logo & Branding Media"}</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {lang === "ar" 
+                    ? "يمكنك التحكم في شعار الموقع بالهيدر وصورة خلفية قسم الهيرو الرئيسية وتحديثها مباشرة" 
+                    : "Customize the header logo image and the main Hero background banner."}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* --- LOGO CARD --- */}
+              <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-sky-600" />
+                      <span>{lang === "ar" ? "شعار الموقع (Logo)" : "Header Logo Image"}</span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsLogo("")}
+                      className="text-xs text-slate-500 hover:text-sky-600 flex items-center gap-1 transition-colors cursor-pointer"
+                      title={lang === "ar" ? "إعادة اللوجو الافتراضي" : "Reset to default logo"}
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>{lang === "ar" ? "افتراضي" : "Reset"}</span>
+                    </button>
+                  </div>
+
+                  {/* Logo Preview */}
+                  <div className="mb-4 p-4 bg-white border border-slate-200 rounded-xl flex items-center justify-center min-h-[100px] shadow-inner">
+                    <img
+                      src={settingsLogo || "/khatwa_logo.jpg"}
+                      alt="Logo Preview"
+                      className="max-h-20 max-w-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/khatwa_logo.jpg";
+                      }}
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+
+                  {/* URL Input */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {lang === "ar" ? "رابط صورة اللوجو (Image URL):" : "Logo Image URL:"}
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsLogo}
+                      onChange={(e) => setSettingsLogo(e.target.value)}
+                      placeholder={lang === "ar" ? "أدخل رابط صورة اللوجو أو ارفع صورة..." : "Enter image URL or upload..."}
+                      className={`w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 ${lang === "ar" ? "text-right" : "text-left"}`}
+                      dir="ltr"
+                      id="settings-logo-url-input"
+                    />
+                  </div>
+
+                  {/* Local File Upload Button */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {lang === "ar" ? "أو ارفع صورة من جهازك:" : "Or upload from device:"}
+                    </label>
+                    <label className="flex items-center justify-center gap-2 p-2.5 bg-white border border-dashed border-sky-300 hover:border-sky-500 text-sky-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors shadow-sm">
+                      <Upload className="w-4 h-4 text-sky-600" />
+                      <span>{lang === "ar" ? "اختيار صورة اللوجو من الجهاز" : "Browse Logo File"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              if (typeof reader.result === "string") {
+                                setSettingsLogo(reader.result);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-200/60 text-[11px] text-slate-500">
+                  {lang === "ar" ? "💡 يُنصح بملف صورة بعلف شفاف أو خلفية بيضاء لنقاء العرض في الهيدر." : "💡 Recommended to use transparent PNG or clean logo image."}
+                </div>
+              </div>
+
+              {/* --- HERO BACKGROUND CARD --- */}
+              <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-sky-600" />
+                      <span>{lang === "ar" ? "خلفية قسم الهيرو (Hero Background)" : "Hero Main Banner Image"}</span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsHeroBg("")}
+                      className="text-xs text-slate-500 hover:text-sky-600 flex items-center gap-1 transition-colors cursor-pointer"
+                      title={lang === "ar" ? "إعادة الخلفية الافتراضية" : "Reset to default background"}
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>{lang === "ar" ? "افتراضي" : "Reset"}</span>
+                    </button>
+                  </div>
+
+                  {/* Hero Background Preview */}
+                  <div className="mb-4 relative rounded-xl overflow-hidden border border-slate-300 h-28 bg-slate-900 shadow-inner flex items-center justify-center">
+                    <img
+                      src={settingsHeroBg || "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1920&q=80"}
+                      alt="Hero Background Preview"
+                      className="w-full h-full object-cover opacity-70"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-slate-950/40 flex flex-col items-center justify-center p-2 text-center">
+                      <span className="text-white text-xs font-extrabold drop-shadow-md">
+                        {t.heroHeading} {t.heroSub}
+                      </span>
+                      <span className="text-[10px] text-sky-300 mt-0.5">معاينة الهيرو بالصورة المختارة</span>
+                    </div>
+                  </div>
+
+                  {/* URL Input */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {lang === "ar" ? "رابط صورة خلفية الهيرو (Hero Image URL):" : "Hero Image URL:"}
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsHeroBg}
+                      onChange={(e) => setSettingsHeroBg(e.target.value)}
+                      placeholder={lang === "ar" ? "أدخل رابط صورة خلفية الهيرو..." : "Enter hero background URL..."}
+                      className={`w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 ${lang === "ar" ? "text-right" : "text-left"}`}
+                      dir="ltr"
+                      id="settings-herobg-url-input"
+                    />
+                  </div>
+
+                  {/* Local File Upload */}
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {lang === "ar" ? "أو ارفع صورة خلفية من جهازك:" : "Or upload background from device:"}
+                    </label>
+                    <label className="flex items-center justify-center gap-2 p-2.5 bg-white border border-dashed border-sky-300 hover:border-sky-500 text-sky-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors shadow-sm">
+                      <Upload className="w-4 h-4 text-sky-600" />
+                      <span>{lang === "ar" ? "اختيار صورة الخلفية من الجهاز" : "Browse Background Image"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              if (typeof reader.result === "string") {
+                                setSettingsHeroBg(reader.result);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Preset Suggestions */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      {lang === "ar" ? "خيارات خلفيات مقترحة:" : "Presets:"}
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setSettingsHeroBg("https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1920&q=80")}
+                        className="p-1.5 bg-white border border-slate-200 rounded-lg hover:border-sky-500 font-medium text-slate-700 text-right truncate cursor-pointer"
+                      >
+                        🌊 سيناء والبحر (الافتراضي)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSettingsHeroBg("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80")}
+                        className="p-1.5 bg-white border border-slate-200 rounded-lg hover:border-sky-500 font-medium text-slate-700 text-right truncate cursor-pointer"
+                      >
+                        🏖️ شاطئ الغردقة الذهبي
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSettingsHeroBg("https://images.unsplash.com/photo-1517760444937-f6397edcbbcd?auto=format&fit=crop&w=1920&q=80")}
+                        className="p-1.5 bg-white border border-slate-200 rounded-lg hover:border-sky-500 font-medium text-slate-700 text-right truncate cursor-pointer"
+                      >
+                        🏜️ صحراء وجبال دهب
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSettingsHeroBg("https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=80")}
+                        className="p-1.5 bg-white border border-slate-200 rounded-lg hover:border-sky-500 font-medium text-slate-700 text-right truncate cursor-pointer"
+                      >
+                        🏨 مسبح الفندق الفاخر
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onUpdateSettings) {
+                    onUpdateSettings({
+                      logoUrl: settingsLogo,
+                      heroBgUrl: settingsHeroBg,
+                    });
+                  }
+                  setSuccessMsg(
+                    lang === "ar"
+                      ? "تم حفظ إعدادات شعار الموقع وصورة الهيرو بنجاح!"
+                      : "Branding and hero image settings saved successfully!"
+                  );
+                }}
+                className="w-full sm:w-auto px-8 py-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-sky-600/20 hover:shadow-sky-600/35 flex items-center justify-center gap-2 cursor-pointer"
+                id="save-site-settings-btn"
+              >
+                <CheckCircle2 className="w-5 h-5 text-sky-200" />
+                <span>{lang === "ar" ? "حفظ وتطبيق إعدادات الشعار والخلفية" : "Save & Apply Branding Settings"}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
