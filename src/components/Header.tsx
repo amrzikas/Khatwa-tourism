@@ -1,6 +1,7 @@
 import React from "react";
-import { Compass, ShieldCheck, User, LogOut, LayoutDashboard, Home, Globe } from "lucide-react";
+import { ShieldCheck, User, LogOut, LayoutDashboard, Home, Globe } from "lucide-react";
 import { Language, translations } from "../utils/translations";
+import khatwaLogo from "../assets/khatwa_logo.jpg";
 
 interface HeaderProps {
   currentView: "client" | "admin";
@@ -26,26 +27,18 @@ export default function Header({
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm" dir={lang === "ar" ? "rtl" : "ltr"}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Logo and Brand Name */}
+        {/* Logo and Brand Image */}
         <div 
           onClick={() => onViewChange("client")}
-          className="flex items-center gap-2.5 cursor-pointer group"
+          className="flex items-center cursor-pointer group py-1"
           id="logo-container"
         >
-          <div className="p-2 bg-gradient-to-br from-sky-500 to-indigo-600 text-white rounded-xl shadow-sm group-hover:scale-105 transition-all flex items-center justify-center">
-            <Compass className="w-5.5 h-5.5" />
-          </div>
-          <div className={lang === "ar" ? "text-right" : "text-left"}>
-            <h1 className="text-xl sm:text-2xl font-extrabold bg-gradient-to-l from-sky-600 to-indigo-700 bg-clip-text text-transparent italic tracking-tight font-sans leading-none">
-              {t.brandName}
-              {t.brandSubtitle && (
-                <span className="text-indigo-600 font-medium not-italic ml-1 mr-1">{t.brandSubtitle}</span>
-              )}
-            </h1>
-            {t.slogan && (
-              <p className="text-[10px] text-slate-400 font-mono tracking-wider mt-0.5">{t.slogan}</p>
-            )}
-          </div>
+          <img 
+            src={khatwaLogo} 
+            alt="Khatwa Travel - خطوة للسياحة" 
+            className="h-14 sm:h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            referrerPolicy="no-referrer"
+          />
         </div>
 
         {/* Navigation / Actions */}
