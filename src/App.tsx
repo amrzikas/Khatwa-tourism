@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import Hero from "./components/Hero";
 import DestinationList from "./components/DestinationList";
 import HotelCard from "./components/HotelCard";
+import ActivitySection from "./components/ActivitySection";
 import AdminLogin from "./components/AdminLogin";
 import AdminDashboard from "./components/AdminDashboard";
 import { Compass, Sparkles, Phone, Mail, MapPin, Building2, HelpCircle } from "lucide-react";
@@ -321,6 +322,13 @@ export default function App() {
               </div>
             )}
           </section>
+
+          {/* Popular Activities Section ("بحر وجبال وسفاري وغطس") - Moved after Hotels Section */}
+          <ActivitySection
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            lang={lang}
+          />
 
           {/* Quick FAQ / Info block for brand value */}
           <section className="bg-white border-t border-slate-100 py-16" dir={lang === "ar" ? "rtl" : "ltr"}>
