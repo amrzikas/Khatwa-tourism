@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Destination, Hotel, RoomType, AccommodationType } from "../types";
+import { Destination, Hotel, RoomType, AccommodationType, TransferLocation, VehicleOption } from "../types";
 import { Language, translations, translateText } from "../utils/translations";
 import {
   MapPin,
@@ -14,11 +14,13 @@ import {
   Compass,
   Star,
   Users,
-  Utensils,
+  BedDouble,
   Baby,
   Truck,
   Check,
-  AlertCircle
+  AlertCircle,
+  Edit,
+  Car
 } from "lucide-react";
 
 interface AdminDashboardProps {
@@ -76,13 +78,22 @@ export default function AdminDashboard({
     "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&w=800&q=80"
   ]);
 
-  // Three Main Room Types
-  const [singlePrice, setSinglePrice] = useState(100);
-  const [doublePrice, setDoublePrice] = useState(150);
-  const [triplePrice, setTriplePrice] = useState(200);
+  // Editing state for hotels
+  const [editingHotelId, setEditingHotelId] = useState<string | null>(null);
 
-  // Availability Periods
+  // Room Types State & Default Fallback
+  const defaultRoomTypes: RoomType[] = [
+    { id: "single", name: lang === "ar" ? "فردي" : "Single", pricePerNight: 0, maxOccupancy: lang === "ar" ? "شخص واحد" : "1 Adult" },
+    { id: "double", name: lang === "ar" ? "ثنائية" : "Double", pricePerNight: 0, maxOccupancy: lang === "ar" ? "شخصين بالغين" : "2 Adults" },
+    { id: "triple", name: lang === "ar" ? "ثلاثية" : "Triple", pricePerNight: 0, maxOccupancy: lang === "ar" ? "3 أشخاص بالغين" : "3 Adults" }
+  ];
+  const [hotelRoomTypes, setHotelRoomTypes] = useState<RoomType[]>(defaultRoomTypes);
+  const [newRoomName, setNewRoomName] = useState("");
+  const [newRoomOcc, setNewRoomOcc] = useState("");
+
+  // Availability Periods & Editing
   const [availabilityPeriods, setAvailabilityPeriods] = useState<any[]>([]);
+  const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
   const [periodSingleAvailable, setPeriodSingleAvailable] = useState(true);
@@ -91,6 +102,13 @@ export default function AdminDashboard({
   const [periodDoublePrice, setPeriodDoublePrice] = useState(150);
   const [periodTripleAvailable, setPeriodTripleAvailable] = useState(true);
   const [periodTriplePrice, setPeriodTriplePrice] = useState(200);
+
+  // Dynamic Prices Map per Room Type ID: { [roomTypeId]: { price: number, isAvailable: boolean } }
+  const [periodRoomPrices, setPeriodRoomPrices] = useState<Record<string, { price: number; isAvailable: boolean }>>({
+    single: { price: 100, isAvailable: true },
+    double: { price: 150, isAvailable: true },
+    triple: { price: 200, isAvailable: true }
+  });
 
   // Accommodation Options
   const [accName, setAccName] = useState("");
@@ -103,7 +121,7 @@ export default function AdminDashboard({
     }
   ]);
 
-  // Transfer
+  // Transfer Locations & Vehicle Options
   const [transPolicy, setTransPolicy] = useState(
     lang === "ar"
       ? "انتقالات جماعية مكيفة من المطار للفندق وبالعكس."
@@ -111,6 +129,10 @@ export default function AdminDashboard({
   );
   const [transPrice, setTransPrice] = useState(15);
   const [transAvailable, setTransAvailable] = useState(true);
+  const [transLocations, setTransLocations] = useState<TransferLocation[]>([]);
+  const [newLocName, setNewLocName] = useState("");
+  const [newVehicleTypes, setNewVehicleTypes] = useState<Record<string, string>>({});
+  const [newVehiclePrices, setNewVehiclePrices] = useState<Record<string, number>>({});
 
   // Status indicators
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -147,6 +169,62 @@ export default function AdminDashboard({
     setDestImage("");
   };
 
+  // --- EDIT HOTEL HANDLER ---
+  const handleEditHotelClick = (hotel: Hotel) => {
+    setEditingHotelId(hotel.id);
+    setHotelDestId(hotel.destinationId);
+    setHotelName(hotel.name);
+    setHotelStars(hotel.stars);
+    setHotelDesc(hotel.description);
+    setHotelLocName(hotel.locationName);
+    setHotelLocMapUrl(hotel.locationMapUrl || "");
+    setHotelChildPolicy(hotel.childPolicy || "");
+    setHotelFeatures(hotel.mainFeatures || []);
+    setHotelImages(hotel.images || []);
+    setHotelRoomTypes(hotel.roomTypes && hotel.roomTypes.length > 0 ? hotel.roomTypes : defaultRoomTypes);
+    setAvailabilityPeriods(hotel.availabilityPeriods || []);
+    setEditingPeriodId(null);
+    setHotelAccTypes(hotel.accommodationTypes || []);
+    setTransPolicy(hotel.transfers?.policy || "");
+    setTransPrice(hotel.transfers?.price || 0);
+    setTransAvailable(hotel.transfers?.isAvailable ?? true);
+    setTransLocations(hotel.transfers?.locations || []);
+    
+    // Switch to hotels tab if not already there
+    setActiveTab("hotels");
+    
+    // Scroll smoothly to the form
+    const element = document.getElementById("admin-hotel-form-title");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingHotelId(null);
+    setEditingPeriodId(null);
+    setHotelName("");
+    setHotelDesc("");
+    setHotelLocName("");
+    setHotelLocMapUrl("");
+    setHotelChildPolicy("");
+    setHotelRoomTypes(defaultRoomTypes);
+    setHotelFeatures(lang === "ar"
+      ? ["واي فاي مجاني", "مسبح خارجي دافئ", "شاطئ خاص", "نادي صحي وسبا"]
+      : ["Free Wi-Fi", "Heated Outdoor Pool", "Private Beach", "Health Club & Spa"]
+    );
+    setHotelImages([
+      "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&w=800&q=80"
+    ]);
+    setAvailabilityPeriods([]);
+    setHotelAccTypes([{ id: "init-a-1", name: lang === "ar" ? "إقامة شاملة بالكامل (All Inclusive)" : "All Inclusive (AI)", priceAddition: 0 }]);
+    setTransLocations([]);
+  };
+
   // --- SUBMIT HOTEL ---
   const handleAddHotelSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,16 +243,10 @@ export default function AdminDashboard({
       return;
     }
 
-    // Every hotel must have 3 main room types: Single, Double, Triple
-    const defaultRoomTypes: RoomType[] = [
-      { id: "single", name: "فردي", pricePerNight: singlePrice, maxOccupancy: lang === "ar" ? "شخص واحد" : "1 Adult" },
-      { id: "double", name: "ثنائية", pricePerNight: doublePrice, maxOccupancy: lang === "ar" ? "شخصين بالغين" : "2 Adults" },
-      { id: "triple", name: "ثلاثية", pricePerNight: triplePrice, maxOccupancy: lang === "ar" ? "3 أشخاص بالغين" : "3 Adults" }
-    ];
-
-    // Construct Hotel object
+    // Construct/Update Hotel object
+    const hotelId = editingHotelId || "hotel-" + Date.now();
     const newHotel: Hotel = {
-      id: "hotel-" + Date.now(),
+      id: hotelId,
       destinationId: activeDestId,
       name: hotelName.trim(),
       stars: hotelStars,
@@ -183,27 +255,41 @@ export default function AdminDashboard({
       images: hotelImages, // Exactly 5 images
       locationName: hotelLocName.trim(),
       locationMapUrl: hotelLocMapUrl.trim() || `https://maps.google.com/maps?q=${encodeURIComponent(hotelName)}&t=&z=13&ie=UTF8&iwloc=&output=embed`,
-      roomTypes: defaultRoomTypes,
+      roomTypes: hotelRoomTypes.length > 0 ? hotelRoomTypes : defaultRoomTypes,
       accommodationTypes: hotelAccTypes.length > 0 ? hotelAccTypes : [{ id: "acc-def", name: lang === "ar" ? "إفطار فقط" : "Breakfast Only", priceAddition: 0 }],
       childPolicy: hotelChildPolicy.trim() || (lang === "ar" ? "الأطفال حتى سن 5.99 سنوات مجاناً." : "Children up to 5.99 years are free of charge."),
       transfers: {
         policy: transPolicy.trim() || (lang === "ar" ? "انتقالات اختيارية مكيفة." : "Optional air-conditioned transfers."),
         price: transPrice,
-        isAvailable: transAvailable
+        isAvailable: transAvailable,
+        locations: transLocations
       },
       availabilityPeriods: availabilityPeriods
     };
 
     onAddHotel(newHotel);
-    setSuccessMsg(t.hotelFormSuccess.replace("{name}", hotelName));
+    
+    if (editingHotelId) {
+      setSuccessMsg(lang === "ar" ? "تم تعديل بيانات الفندق بنجاح!" : "Hotel details updated successfully!");
+    } else {
+      setSuccessMsg(t.hotelFormSuccess.replace("{name}", hotelName));
+    }
 
-    // Reset Form
+    // Reset Form & Editing State
+    setEditingHotelId(null);
+    setEditingPeriodId(null);
     setHotelName("");
     setHotelDesc("");
     setHotelLocName("");
     setHotelLocMapUrl("");
     setHotelChildPolicy("");
-    setHotelFeatures(["واي فاي مجاني", "مسبح خارجي دافئ", "شاطئ خاص", "نادي صحي وسبا"]);
+    setTransLocations([]);
+    setHotelLocMapUrl("");
+    setHotelChildPolicy("");
+    setHotelFeatures(lang === "ar"
+      ? ["واي فاي مجاني", "مسبح خارجي دافئ", "شاطئ خاص", "نادي صحي وسبا"]
+      : ["Free Wi-Fi", "Heated Outdoor Pool", "Private Beach", "Health Club & Spa"]
+    );
     setHotelImages([
       "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
@@ -211,11 +297,8 @@ export default function AdminDashboard({
       "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&w=800&q=80"
     ]);
-    setSinglePrice(100);
-    setDoublePrice(150);
-    setTriplePrice(200);
     setAvailabilityPeriods([]);
-    setHotelAccTypes([{ id: "init-a-1", name: "إقامة شاملة بالكامل (All Inclusive)", priceAddition: 0 }]);
+    setHotelAccTypes([{ id: "init-a-1", name: lang === "ar" ? "إقامة شاملة بالكامل (All Inclusive)" : "All Inclusive (AI)", priceAddition: 0 }]);
   };
 
   // --- Dynamic add/remove helpers ---
@@ -481,9 +564,20 @@ export default function AdminDashboard({
           
           {/* Form Side (7 cols) */}
           <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-6 border-b border-slate-100 pb-3">
-              <Building2 className="w-5 h-5 text-sky-600" />
-              <span>{t.createHotel}</span>
+            <h3 id="admin-hotel-form-title" className="text-lg font-bold text-slate-900 flex items-center justify-between mb-6 border-b border-slate-100 pb-3">
+              <span className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-sky-600" />
+                <span>{editingHotelId ? (lang === "ar" ? "تعديل بيانات الفندق" : "Edit Hotel Details") : t.createHotel}</span>
+              </span>
+              {editingHotelId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full font-bold hover:bg-red-100 transition-all cursor-pointer"
+                >
+                  {lang === "ar" ? "إلغاء التعديل ✕" : "Cancel Edit ✕"}
+                </button>
+              )}
             </h3>
 
             <form onSubmit={handleAddHotelSubmit} className="space-y-6">
@@ -655,193 +749,333 @@ export default function AdminDashboard({
 
               </div>
 
-              {/* Room Prices (Single, Double, Triple) */}
-              <div className="bg-sky-50/20 p-4 rounded-2xl border border-sky-100/50 space-y-4">
-                <h4 className="text-xs font-extrabold text-sky-900 flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-sky-600" />
-                  <span>{t.roomRatesSubtitle}</span>
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">{t.singlePriceLabel}</label>
+
+
+              {/* Hotel Room Types Builder */}
+              <div className="bg-sky-50/20 p-4 rounded-2xl border border-sky-100/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-sky-950 flex items-center gap-1.5">
+                    <BedDouble className="w-4 h-4 text-sky-600" />
+                    <span>{t.hotelRoomTypesSection}</span>
+                  </h4>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    {hotelRoomTypes.length} {lang === "ar" ? "أنواع غرف مضافة" : "room types configured"}
+                  </span>
+                </div>
+
+                {/* Form to add a new custom room type */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end bg-white p-3 rounded-xl border border-sky-100">
+                  <div className="sm:col-span-6">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">{t.roomTypeNameLabel}</label>
                     <input
-                      type="number"
-                      value={singlePrice}
-                      onChange={(e) => setSinglePrice(Number(e.target.value) || 0)}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-center font-bold"
+                      type="text"
+                      value={newRoomName}
+                      onChange={(e) => setNewRoomName(e.target.value)}
+                      placeholder={t.roomTypeNamePlaceholder}
+                      className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs ${lang === "ar" ? "text-right" : "text-left"}`}
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">{t.doublePriceLabel}</label>
+                  <div className="sm:col-span-4">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">{t.roomOccupancyLabel}</label>
                     <input
-                      type="number"
-                      value={doublePrice}
-                      onChange={(e) => setDoublePrice(Number(e.target.value) || 0)}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-center font-bold"
+                      type="text"
+                      value={newRoomOcc}
+                      onChange={(e) => setNewRoomOcc(e.target.value)}
+                      placeholder={lang === "ar" ? "مثال: 4 أشخاص بالغين" : "e.g., 4 Adults"}
+                      className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs ${lang === "ar" ? "text-right" : "text-left"}`}
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">{t.triplePriceLabel}</label>
-                    <input
-                      type="number"
-                      value={triplePrice}
-                      onChange={(e) => setTriplePrice(Number(e.target.value) || 0)}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-center font-bold"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newRoomName.trim()) return;
+                      const newRt: RoomType = {
+                        id: "rt-" + Date.now() + Math.random().toString(36).substr(2, 4),
+                        name: newRoomName.trim(),
+                        pricePerNight: 0,
+                        maxOccupancy: newRoomOcc.trim() || (lang === "ar" ? "شخصين" : "2 Adults")
+                      };
+                      setHotelRoomTypes([...hotelRoomTypes, newRt]);
+                      setPeriodRoomPrices(prev => ({ ...prev, [newRt.id]: { price: 150, isAvailable: true } }));
+                      setNewRoomName("");
+                      setNewRoomOcc("");
+                    }}
+                    className="sm:col-span-2 w-full py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold cursor-pointer h-9 transition-colors shrink-0"
+                  >
+                    {t.addRoomTypeBtn}
+                  </button>
+                </div>
+
+                {/* Display list of room types */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {hotelRoomTypes.map((rt) => (
+                    <div key={rt.id} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-sky-100 shadow-2xs">
+                      <BedDouble className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                      <span className="text-xs font-bold text-slate-800">{rt.name}</span>
+                      <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-medium">{rt.maxOccupancy}</span>
+                      {hotelRoomTypes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHotelRoomTypes(hotelRoomTypes.filter(r => r.id !== rt.id));
+                          }}
+                          className="text-red-400 hover:text-red-600 cursor-pointer text-xs"
+                          title={lang === "ar" ? "حذف نوع الغرفة" : "Remove room type"}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
               {/* Custom Availability Periods */}
               <div className="bg-indigo-50/20 p-4 rounded-2xl border border-indigo-100/50 space-y-4">
-                <h4 className="text-xs font-extrabold text-indigo-900 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-indigo-600" />
-                  <span>{t.availabilityPeriodsSection}</span>
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-indigo-900 flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-indigo-600" />
+                    <span>{t.availabilityPeriodsSection}</span>
+                  </h4>
+                  {editingPeriodId && (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
+                      {lang === "ar" ? "تعديل فترة قائمة" : "Editing Period"}
+                    </span>
+                  )}
+                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-white/50 p-3 rounded-xl border border-indigo-100/20">
-                  <div className="sm:col-span-3">
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">{t.startDateLabel}</label>
-                    <input
-                      type="date"
-                      value={periodStart}
-                      onChange={(e) => setPeriodStart(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-center"
-                    />
-                  </div>
-                  <div className="sm:col-span-3">
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1">{t.endDateLabel}</label>
-                    <input
-                      type="date"
-                      value={periodEnd}
-                      onChange={(e) => setPeriodEnd(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-center"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-6 grid grid-cols-3 gap-2">
-                    {/* Single */}
-                    <div className="bg-white p-2 rounded-lg border border-slate-100 flex flex-col items-center">
-                      <label className="flex items-center gap-1 cursor-pointer select-none mb-1">
-                        <input
-                          type="checkbox"
-                          checked={periodSingleAvailable}
-                          onChange={(e) => setPeriodSingleAvailable(e.target.checked)}
-                          className="w-3.5 h-3.5 text-indigo-600 accent-indigo-600 rounded"
-                        />
-                        <span className="text-[10px] font-bold">{lang === "ar" ? "فردي" : "Single"}</span>
-                      </label>
+                <div className="space-y-3 bg-white/60 p-3.5 rounded-xl border border-indigo-100/30">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1">{t.startDateLabel}</label>
                       <input
-                        type="number"
-                        disabled={!periodSingleAvailable}
-                        value={periodSinglePrice}
-                        onChange={(e) => setPeriodSinglePrice(Number(e.target.value) || 0)}
-                        className="w-full bg-slate-50 disabled:opacity-50 border border-slate-200 rounded-lg p-1 text-[10px] text-center font-bold"
+                        type="date"
+                        value={periodStart}
+                        onChange={(e) => setPeriodStart(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-center"
                       />
                     </div>
-
-                    {/* Double */}
-                    <div className="bg-white p-2 rounded-lg border border-slate-100 flex flex-col items-center">
-                      <label className="flex items-center gap-1 cursor-pointer select-none mb-1">
-                        <input
-                          type="checkbox"
-                          checked={periodDoubleAvailable}
-                          onChange={(e) => setPeriodDoubleAvailable(e.target.checked)}
-                          className="w-3.5 h-3.5 text-indigo-600 accent-indigo-600 rounded"
-                        />
-                        <span className="text-[10px] font-bold">{lang === "ar" ? "ثنائية" : "Double"}</span>
-                      </label>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1">{t.endDateLabel}</label>
                       <input
-                        type="number"
-                        disabled={!periodDoubleAvailable}
-                        value={periodDoublePrice}
-                        onChange={(e) => setPeriodDoublePrice(Number(e.target.value) || 0)}
-                        className="w-full bg-slate-50 disabled:opacity-50 border border-slate-200 rounded-lg p-1 text-[10px] text-center font-bold"
-                      />
-                    </div>
-
-                    {/* Triple */}
-                    <div className="bg-white p-2 rounded-lg border border-slate-100 flex flex-col items-center">
-                      <label className="flex items-center gap-1 cursor-pointer select-none mb-1">
-                        <input
-                          type="checkbox"
-                          checked={periodTripleAvailable}
-                          onChange={(e) => setPeriodTripleAvailable(e.target.checked)}
-                          className="w-3.5 h-3.5 text-indigo-600 accent-indigo-600 rounded"
-                        />
-                        <span className="text-[10px] font-bold">{lang === "ar" ? "ثلاثية" : "Triple"}</span>
-                      </label>
-                      <input
-                        type="number"
-                        disabled={!periodTripleAvailable}
-                        value={periodTriplePrice}
-                        onChange={(e) => setPeriodTriplePrice(Number(e.target.value) || 0)}
-                        className="w-full bg-slate-50 disabled:opacity-50 border border-slate-200 rounded-lg p-1 text-[10px] text-center font-bold"
+                        type="date"
+                        value={periodEnd}
+                        onChange={(e) => setPeriodEnd(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-center"
                       />
                     </div>
                   </div>
 
-                  <div className="sm:col-span-12 mt-2">
+                  {/* Dynamic Room Prices for ALL Room Types */}
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-indigo-950 mb-2">
+                      {lang === "ar" ? "أسعار الغرف المتاحة في هذه الفترة (لكل أنواع الغرف بالفندق):" : "Room prices for this period (for all configured room types):"}
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {hotelRoomTypes.map((rt) => {
+                        const priceInfo = periodRoomPrices[rt.id] || { price: 100, isAvailable: true };
+                        return (
+                          <div key={rt.id} className="bg-white p-2.5 rounded-xl border border-indigo-100 flex flex-col justify-between space-y-1.5 shadow-2xs">
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={priceInfo.isAvailable}
+                                onChange={(e) => {
+                                  setPeriodRoomPrices({
+                                    ...periodRoomPrices,
+                                    [rt.id]: { ...priceInfo, isAvailable: e.target.checked }
+                                  });
+                                }}
+                                className="w-3.5 h-3.5 text-indigo-600 accent-indigo-600 rounded cursor-pointer"
+                              />
+                              <span className="text-[11px] font-bold text-slate-800 line-clamp-1">{rt.name}</span>
+                            </label>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                disabled={!priceInfo.isAvailable}
+                                value={priceInfo.price}
+                                onChange={(e) => {
+                                  setPeriodRoomPrices({
+                                    ...periodRoomPrices,
+                                    [rt.id]: { ...priceInfo, price: Number(e.target.value) || 0 }
+                                  });
+                                }}
+                                className="w-full bg-slate-50 disabled:opacity-40 border border-slate-200 rounded-lg p-1 text-xs text-center font-bold font-mono text-emerald-700"
+                              />
+                              <span className="text-[9px] text-slate-400 shrink-0">{t.currencySymbol}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex gap-2">
                     <button
                       type="button"
                       onClick={() => {
                         if (!periodStart || !periodEnd) return;
-                        const newPeriod = {
-                          id: "period-" + Date.now() + Math.random().toString(36).substr(2, 4),
-                          startDate: periodStart,
-                          endDate: periodEnd,
-                          singlePrice: Number(periodSinglePrice) || 0,
-                          doublePrice: Number(periodDoublePrice) || 0,
-                          triplePrice: Number(periodTriplePrice) || 0,
-                          singleAvailable: periodSingleAvailable,
-                          doubleAvailable: periodDoubleAvailable,
-                          tripleAvailable: periodTripleAvailable
-                        };
-                        setAvailabilityPeriods([...availabilityPeriods, newPeriod]);
+                        
+                        // Extract single/double/triple for fallback compatibility
+                        const singleP = periodRoomPrices["single"]?.price ?? (hotelRoomTypes.find(r => r.id === "single") ? periodRoomPrices["single"]?.price : 0) ?? 0;
+                        const doubleP = periodRoomPrices["double"]?.price ?? (hotelRoomTypes.find(r => r.id === "double") ? periodRoomPrices["double"]?.price : 0) ?? 0;
+                        const tripleP = periodRoomPrices["triple"]?.price ?? (hotelRoomTypes.find(r => r.id === "triple") ? periodRoomPrices["triple"]?.price : 0) ?? 0;
+
+                        if (editingPeriodId) {
+                          setAvailabilityPeriods(availabilityPeriods.map(p => {
+                            if (p.id === editingPeriodId) {
+                              return {
+                                ...p,
+                                startDate: periodStart,
+                                endDate: periodEnd,
+                                singlePrice: singleP,
+                                doublePrice: doubleP,
+                                triplePrice: tripleP,
+                                singleAvailable: periodRoomPrices["single"]?.isAvailable ?? true,
+                                doubleAvailable: periodRoomPrices["double"]?.isAvailable ?? true,
+                                tripleAvailable: periodRoomPrices["triple"]?.isAvailable ?? true,
+                                roomPrices: { ...periodRoomPrices }
+                              };
+                            }
+                            return p;
+                          }));
+                          setEditingPeriodId(null);
+                        } else {
+                          const newPeriod = {
+                            id: "period-" + Date.now() + Math.random().toString(36).substr(2, 4),
+                            startDate: periodStart,
+                            endDate: periodEnd,
+                            singlePrice: singleP,
+                            doublePrice: doubleP,
+                            triplePrice: tripleP,
+                            singleAvailable: periodRoomPrices["single"]?.isAvailable ?? true,
+                            doubleAvailable: periodRoomPrices["double"]?.isAvailable ?? true,
+                            tripleAvailable: periodRoomPrices["triple"]?.isAvailable ?? true,
+                            roomPrices: { ...periodRoomPrices }
+                          };
+                          setAvailabilityPeriods([...availabilityPeriods, newPeriod]);
+                        }
                         setPeriodStart("");
                         setPeriodEnd("");
                       }}
-                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                      className={`flex-1 py-2 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors ${editingPeriodId ? "bg-amber-600 hover:bg-amber-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
                     >
-                      {t.addPeriodBtn}
+                      {editingPeriodId ? t.updatePeriodBtn : t.addPeriodBtn}
                     </button>
+
+                    {editingPeriodId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPeriodId(null);
+                          setPeriodStart("");
+                          setPeriodEnd("");
+                        }}
+                        className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        {t.cancelEditPeriodBtn}
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Display Added Periods */}
+                {/* Display Added Periods with dynamic columns for ALL room types */}
                 {availabilityPeriods.length > 0 && (
                   <div className="space-y-2">
                     <h5 className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{t.addedPeriodsHeader}</h5>
-                    <div className="overflow-hidden border border-indigo-100 rounded-xl bg-white text-xs">
+                    <div className="overflow-x-auto border border-indigo-100 rounded-xl bg-white text-xs">
                       <table className="w-full text-right divide-y divide-slate-100">
                         <thead className="bg-indigo-50/50 text-indigo-950 font-bold">
                           <tr className={lang === "ar" ? "text-right" : "text-left"}>
-                            <th className="px-3 py-2">{t.startDateLabel}</th>
-                            <th className="px-3 py-2">{t.endDateLabel}</th>
-                            <th className="px-3 py-2 text-center">{lang === "ar" ? "فردي" : "Single"}</th>
-                            <th className="px-3 py-2 text-center">{lang === "ar" ? "ثنائية" : "Double"}</th>
-                            <th className="px-3 py-2 text-center">{lang === "ar" ? "ثلاثية" : "Triple"}</th>
-                            <th className="px-3 py-2 text-center">{t.tableDeleteHeader}</th>
+                            <th className="px-3 py-2 whitespace-nowrap">{t.startDateLabel}</th>
+                            <th className="px-3 py-2 whitespace-nowrap">{t.endDateLabel}</th>
+                            {hotelRoomTypes.map((rt) => (
+                              <th key={rt.id} className="px-3 py-2 text-center whitespace-nowrap">
+                                {rt.name}
+                              </th>
+                            ))}
+                            <th className="px-3 py-2 text-center whitespace-nowrap">{lang === "ar" ? "إجراءات" : "Actions"}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                           {availabilityPeriods.map((per: any) => (
-                            <tr key={per.id} className="hover:bg-slate-50">
-                              <td className="px-3 py-2 font-mono">{per.startDate}</td>
-                              <td className="px-3 py-2 font-mono">{per.endDate}</td>
-                              <td className="px-3 py-2 text-center font-mono">
-                                {per.singleAvailable ? <span className="font-bold text-emerald-600">{per.singlePrice} {t.currencySymbol}</span> : <span className="text-slate-400 line-through">N/A</span>}
-                              </td>
-                              <td className="px-3 py-2 text-center font-mono">
-                                {per.doubleAvailable ? <span className="font-bold text-emerald-600">{per.doublePrice} {t.currencySymbol}</span> : <span className="text-slate-400 line-through">N/A</span>}
-                              </td>
-                              <td className="px-3 py-2 text-center font-mono">
-                                {per.tripleAvailable ? <span className="font-bold text-emerald-600">{per.triplePrice} {t.currencySymbol}</span> : <span className="text-slate-400 line-through">N/A</span>}
-                              </td>
-                              <td className="px-3 py-2 text-center">
-                                <button type="button" onClick={() => setAvailabilityPeriods(availabilityPeriods.filter(p => p.id !== per.id))} className="text-red-500 hover:text-red-700 cursor-pointer">
-                                  <Trash2 className="w-4 h-4 mx-auto" />
-                                </button>
+                            <tr key={per.id} className={`hover:bg-slate-50 ${editingPeriodId === per.id ? "bg-amber-50/60" : ""}`}>
+                              <td className="px-3 py-2 font-mono whitespace-nowrap">{per.startDate}</td>
+                              <td className="px-3 py-2 font-mono whitespace-nowrap">{per.endDate}</td>
+                              
+                              {/* Price input for each room type */}
+                              {hotelRoomTypes.map((rt) => {
+                                const rp = per.roomPrices?.[rt.id] || {
+                                  price: rt.id === "single" ? per.singlePrice : rt.id === "double" ? per.doublePrice : rt.id === "triple" ? per.triplePrice : 0,
+                                  isAvailable: rt.id === "single" ? per.singleAvailable : rt.id === "double" ? per.doubleAvailable : rt.id === "triple" ? per.tripleAvailable : true
+                                };
+
+                                return (
+                                  <td key={rt.id} className="px-3 py-2 text-center font-mono whitespace-nowrap">
+                                    {rp.isAvailable !== false ? (
+                                      <input
+                                        type="number"
+                                        value={rp.price ?? 0}
+                                        onChange={(e) => {
+                                          const val = Number(e.target.value) || 0;
+                                          const updatedPrices = {
+                                            ...(per.roomPrices || {}),
+                                            [rt.id]: { price: val, isAvailable: true }
+                                          };
+                                          setAvailabilityPeriods(availabilityPeriods.map(p => p.id === per.id ? {
+                                            ...p,
+                                            roomPrices: updatedPrices,
+                                            singlePrice: rt.id === "single" ? val : p.singlePrice,
+                                            doublePrice: rt.id === "double" ? val : p.doublePrice,
+                                            triplePrice: rt.id === "triple" ? val : p.triplePrice
+                                          } : p));
+                                        }}
+                                        className="w-16 text-center font-bold text-emerald-600 bg-slate-50 border border-slate-200 rounded p-1 text-xs"
+                                      />
+                                    ) : (
+                                      <span className="text-slate-400 line-through text-[10px]">N/A</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+
+                              <td className="px-3 py-2 text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingPeriodId(per.id);
+                                      setPeriodStart(per.startDate);
+                                      setPeriodEnd(per.endDate);
+                                      
+                                      // Build periodRoomPrices for editing form
+                                      const pricesMap: Record<string, { price: number; isAvailable: boolean }> = {};
+                                      hotelRoomTypes.forEach(rt => {
+                                        if (per.roomPrices && per.roomPrices[rt.id]) {
+                                          pricesMap[rt.id] = per.roomPrices[rt.id];
+                                        } else {
+                                          const pr = rt.id === "single" ? per.singlePrice : rt.id === "double" ? per.doublePrice : rt.id === "triple" ? per.triplePrice : 100;
+                                          const av = rt.id === "single" ? per.singleAvailable : rt.id === "double" ? per.doubleAvailable : rt.id === "triple" ? per.tripleAvailable : true;
+                                          pricesMap[rt.id] = { price: pr || 0, isAvailable: av !== false };
+                                        }
+                                      });
+                                      setPeriodRoomPrices(pricesMap);
+                                    }}
+                                    className="text-amber-600 hover:text-amber-800 cursor-pointer p-1 rounded hover:bg-amber-50"
+                                    title={lang === "ar" ? "تعديل الفترة" : "Edit Period"}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAvailabilityPeriods(availabilityPeriods.filter(p => p.id !== per.id))}
+                                    className="text-red-500 hover:text-red-700 cursor-pointer p-1 rounded hover:bg-red-50"
+                                    title={lang === "ar" ? "حذف الفترة" : "Delete Period"}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -855,7 +1089,7 @@ export default function AdminDashboard({
               {/* Accommodation Types Builder */}
               <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
                 <h4 className="text-xs font-extrabold text-slate-700 flex items-center gap-1.5">
-                  <Utensils className="w-4 h-4 text-sky-600" />
+                  <BedDouble className="w-4 h-4 text-sky-600" />
                   <span>{t.accTitle}</span>
                 </h4>
                 
@@ -913,7 +1147,7 @@ export default function AdminDashboard({
                 </div>
               </div>
 
-              {/* Child Policy & Transfers Policies */}
+              {/* Child Policy & General Transfers */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/30 p-4 rounded-2xl border border-slate-100">
                 {/* Child Policy Area */}
                 <div>
@@ -950,42 +1184,196 @@ export default function AdminDashboard({
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] text-slate-500 mb-1">{t.adultPriceLabel}</label>
+                  <div className="pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
-                        type="number"
-                        value={transPrice}
-                        onChange={(e) => setTransPrice(Number(e.target.value) || 0)}
-                        className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs text-center"
-                        id="form-hotel-trans-price"
+                        type="checkbox"
+                        checked={transAvailable}
+                        onChange={(e) => setTransAvailable(e.target.checked)}
+                        className="w-4 h-4 text-sky-600 accent-sky-600 rounded focus:ring-0 cursor-pointer"
+                        id="form-hotel-trans-avail"
                       />
-                    </div>
-
-                    <div className="flex items-center h-full pt-4">
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={transAvailable}
-                          onChange={(e) => setTransAvailable(e.target.checked)}
-                          className="w-4 h-4 text-sky-600 accent-sky-600 rounded focus:ring-0 cursor-pointer"
-                          id="form-hotel-trans-avail"
-                        />
-                        <span className="text-xs font-semibold text-slate-700">{t.serviceAvailable}</span>
-                      </label>
-                    </div>
+                      <span className="text-xs font-semibold text-slate-700">{t.serviceAvailable}</span>
+                    </label>
                   </div>
                 </div>
+              </div>
+
+              {/* Transfer Locations & Vehicle Options (مسارات النقل وأسعار السيارات للكرسي) */}
+              <div className="bg-sky-50/30 p-4 rounded-2xl border border-sky-100/60 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-sky-950 flex items-center gap-1.5">
+                    <Car className="w-4 h-4 text-sky-600" />
+                    <span>{t.transferLocationsTitle}</span>
+                  </h4>
+                </div>
+
+                {/* Input to add a new transfer location/route */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newLocName}
+                    onChange={(e) => setNewLocName(e.target.value)}
+                    placeholder={t.locationNamePlaceholder}
+                    className={`flex-1 bg-white border border-slate-200 rounded-xl p-2.5 text-xs ${lang === "ar" ? "text-right" : "text-left"}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newLocName.trim()) return;
+                      const newLoc: TransferLocation = {
+                        id: "loc-" + Date.now(),
+                        locationName: newLocName.trim(),
+                        vehicles: []
+                      };
+                      setTransLocations([...transLocations, newLoc]);
+                      setNewLocName("");
+                    }}
+                    className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{t.addLocationBtn}</span>
+                  </button>
+                </div>
+
+                {/* Display Transfer Locations List */}
+                {transLocations.length === 0 ? (
+                  <p className="text-[11px] text-slate-400 italic text-center py-2">{t.noLocationsAdded}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {transLocations.map((loc) => (
+                      <div key={loc.id} className="bg-white p-3.5 rounded-xl border border-sky-100 shadow-sm space-y-3">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-sky-600" />
+                            <span className="font-bold text-xs text-slate-800">{loc.locationName}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setTransLocations(transLocations.filter(l => l.id !== loc.id))}
+                            className="text-red-500 hover:text-red-700 cursor-pointer p-1 rounded hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Form to add a vehicle to this location */}
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end bg-slate-50/70 p-2.5 rounded-lg border border-slate-100">
+                          <div className="sm:col-span-6">
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">{t.vehicleTypeLabel}</label>
+                            <input
+                              type="text"
+                              value={newVehicleTypes[loc.id] || ""}
+                              onChange={(e) => setNewVehicleTypes({ ...newVehicleTypes, [loc.id]: e.target.value })}
+                              placeholder={t.vehicleTypePlaceholder}
+                              className={`w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs ${lang === "ar" ? "text-right" : "text-left"}`}
+                            />
+                          </div>
+                          <div className="sm:col-span-4">
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">{t.pricePerSeatLabel}</label>
+                            <input
+                              type="number"
+                              value={newVehiclePrices[loc.id] ?? 0}
+                              onChange={(e) => setNewVehiclePrices({ ...newVehiclePrices, [loc.id]: Number(e.target.value) || 0 })}
+                              className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-center font-bold font-mono"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const vType = (newVehicleTypes[loc.id] || "").trim();
+                              const vPrice = newVehiclePrices[loc.id] ?? 0;
+                              if (!vType) return;
+                              const newVeh: VehicleOption = {
+                                id: "v-" + Date.now(),
+                                vehicleType: vType,
+                                pricePerSeat: vPrice
+                              };
+                              setTransLocations(transLocations.map(l => {
+                                if (l.id === loc.id) {
+                                  return { ...l, vehicles: [...l.vehicles, newVeh] };
+                                }
+                                return l;
+                              }));
+                              setNewVehicleTypes({ ...newVehicleTypes, [loc.id]: "" });
+                              setNewVehiclePrices({ ...newVehiclePrices, [loc.id]: 0 });
+                            }}
+                            className="sm:col-span-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                          >
+                            {t.addVehicleBtn}
+                          </button>
+                        </div>
+
+                        {/* List of vehicles in this location */}
+                        {loc.vehicles.length > 0 && (
+                          <div className="overflow-hidden rounded-lg border border-slate-100 bg-white">
+                            <table className="w-full text-xs">
+                              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-100">
+                                <tr className={lang === "ar" ? "text-right" : "text-left"}>
+                                  <th className="px-3 py-1.5">{t.vehicleTypeLabel}</th>
+                                  <th className="px-3 py-1.5 text-center">{t.pricePerSeatLabel}</th>
+                                  <th className="px-3 py-1.5 text-center">{t.tableDeleteHeader}</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {loc.vehicles.map((v) => (
+                                  <tr key={v.id} className="hover:bg-slate-50">
+                                    <td className="px-3 py-2 font-medium text-slate-800 flex items-center gap-1.5">
+                                      <Car className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                                      <span>{v.vehicleType}</span>
+                                    </td>
+                                    <td className="px-3 py-2 text-center font-mono font-bold text-emerald-600">
+                                      {v.pricePerSeat} {t.currencySymbol}
+                                    </td>
+                                    <td className="px-3 py-2 text-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setTransLocations(transLocations.map(l => {
+                                            if (l.id === loc.id) {
+                                              return { ...l, vehicles: l.vehicles.filter(veh => veh.id !== v.id) };
+                                            }
+                                            return l;
+                                          }));
+                                        }}
+                                        className="text-red-500 hover:text-red-700 cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 mx-auto" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Submit Save Button */}
               <button
                 type="submit"
-                className="w-full py-4 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-base transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                className={`w-full py-4 px-4 text-white font-bold rounded-xl text-base transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+                  editingHotelId 
+                    ? "bg-indigo-600 hover:bg-indigo-700" 
+                    : "bg-sky-600 hover:bg-sky-700"
+                }`}
                 id="form-hotel-submit-btn"
               >
-                <Plus className="w-6 h-6 text-sky-200" />
-                <span>{t.saveHotelBtn}</span>
+                {editingHotelId ? (
+                  <>
+                    <Check className="w-6 h-6 text-indigo-200" />
+                    <span>{lang === "ar" ? "حفظ التعديلات" : "Save Changes"}</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-6 h-6 text-sky-200" />
+                    <span>{t.saveHotelBtn}</span>
+                  </>
+                )}
               </button>
 
             </form>
@@ -1034,19 +1422,29 @@ export default function AdminDashboard({
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => {
-                            if (confirm(t.deleteHotelConfirm.replace("{name}", translateText(hotel.name, lang)))) {
-                              onDeleteHotel(hotel.id);
-                              setSuccessMsg(t.deleteHotelSuccess.replace("{name}", translateText(hotel.name, lang)));
-                            }
-                          }}
-                          className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shrink-0 cursor-pointer"
-                          title={lang === "ar" ? "حذف الفندق" : "Delete Hotel"}
-                          id={`delete-hotel-btn-${hotel.id}`}
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleEditHotelClick(hotel)}
+                            className="p-2.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all cursor-pointer"
+                            title={lang === "ar" ? "تعديل الفندق" : "Edit Hotel"}
+                            id={`edit-hotel-btn-${hotel.id}`}
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(t.deleteHotelConfirm.replace("{name}", translateText(hotel.name, lang)))) {
+                                onDeleteHotel(hotel.id);
+                                setSuccessMsg(t.deleteHotelSuccess.replace("{name}", translateText(hotel.name, lang)));
+                              }
+                            }}
+                            className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
+                            title={lang === "ar" ? "حذف الفندق" : "Delete Hotel"}
+                            id={`delete-hotel-btn-${hotel.id}`}
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

@@ -11,10 +11,23 @@ export interface AccommodationType {
   priceAddition: number; // Price added per night
 }
 
+export interface VehicleOption {
+  id: string;
+  vehicleType: string; // e.g. "سيارة ملاكي (Sedan)", "هايس سياحي (HiAce)", "حافلة كوستر (Coaster)"
+  pricePerSeat: number; // سعر الكرسي / المقعد
+}
+
+export interface TransferLocation {
+  id: string;
+  locationName: string; // e.g. "من مطار القاهرة / المطار إلى الفندق"
+  vehicles: VehicleOption[];
+}
+
 export interface TransferPolicy {
-  policy: string; // e.g. "انتقالات ذهاب وعودة من وإلى المطار"
-  price: number; // Price per person
+  policy: string; // e.g. "سياسة ودليل الانتقالات"
+  price: number; // Base/legacy price per person
   isAvailable: boolean;
+  locations?: TransferLocation[];
 }
 
 export interface AvailabilityPeriod {

@@ -59,11 +59,53 @@ export const initialHotels: Hotel[] = [
     ],
     childPolicy: "الطفل الأول أقل من 11.99 سنة مجاناً في نفس الغرفة. الطفل الثاني أقل من 5.99 سنة مجاناً، ومن 6 سنوات إلى 11.99 سنة يحصل على خصم 50% من سعر الفرد الكبير.",
     transfers: {
-      policy: "انتقالات مجانية متميزة بسيارة خاصة من وإلى مطار شرم الشيخ الدولي عند حجز حد أدنى 4 ليالي.",
+      policy: "انتقالات مجانية متميزة بسيارة خاصة من وإلى المطار عند حجز حد أدنى 4 ليالي.",
       price: 25,
-      isAvailable: true
+      isAvailable: true,
+      locations: [
+        {
+          id: "loc-1",
+          locationName: "من مطار شرم الشيخ الدولي إلى الفندق (ذهاب وعودة)",
+          vehicles: [
+            { id: "v1", vehicleType: "سيارة ملاكي سدان (Sedan)", pricePerSeat: 350 },
+            { id: "v2", vehicleType: "هايس سياحي (HiAce - 14 مقعد)", pricePerSeat: 220 },
+            { id: "v3", vehicleType: "حافلة كوستر (Coaster - 24 مقعد)", pricePerSeat: 160 }
+          ]
+        },
+        {
+          id: "loc-2",
+          locationName: "من السويسة / محطة الحافلات الرئيسية إلى الفندق",
+          vehicles: [
+            { id: "v4", vehicleType: "هايس سياحي (HiAce - 14 مقعد)", pricePerSeat: 180 },
+            { id: "v5", vehicleType: "سيارة ملاكي سدان (Sedan)", pricePerSeat: 280 }
+          ]
+        }
+      ]
     },
-    availabilityPeriods: []
+    availabilityPeriods: [
+      {
+        id: "p1",
+        startDate: "2026-08-01",
+        endDate: "2026-08-31",
+        singlePrice: 2800,
+        doublePrice: 3800,
+        triplePrice: 4900,
+        singleAvailable: true,
+        doubleAvailable: true,
+        tripleAvailable: true
+      },
+      {
+        id: "p2",
+        startDate: "2026-09-01",
+        endDate: "2026-09-30",
+        singlePrice: 2400,
+        doublePrice: 3200,
+        triplePrice: 4200,
+        singleAvailable: true,
+        doubleAvailable: true,
+        tripleAvailable: true
+      }
+    ]
   },
   {
     id: "hotel-2",
@@ -82,9 +124,9 @@ export const initialHotels: Hotel[] = [
     locationName: "خليج نبق، شرم الشيخ، مصر",
     locationMapUrl: "https://maps.google.com/maps?q=Steigenberger%20Alcazar%20Sharm%20El%20Sheikh&t=&z=13&ie=UTF8&iwloc=&output=embed",
     roomTypes: [
-      { id: "single", name: "فردي", pricePerNight: 130, maxOccupancy: "شخص واحد" },
-      { id: "double", name: "ثنائية", pricePerNight: 180, maxOccupancy: "شخصين بالغين" },
-      { id: "triple", name: "ثلاثية", pricePerNight: 250, maxOccupancy: "3 أشخاص بالغين" }
+      { id: "single", name: "فردي", pricePerNight: 0, maxOccupancy: "شخص واحد" },
+      { id: "double", name: "ثنائية", pricePerNight: 0, maxOccupancy: "شخصين بالغين" },
+      { id: "triple", name: "ثلاثية", pricePerNight: 0, maxOccupancy: "3 أشخاص بالغين" }
     ],
     accommodationTypes: [
       { id: "a3", name: "إقامة شاملة بالكامل (All Inclusive)", priceAddition: 0 },
@@ -94,9 +136,31 @@ export const initialHotels: Hotel[] = [
     transfers: {
       policy: "انتقالات سياحية مشتركة مكيفة من وإلى المطار بأسعار رمزية ومريحة.",
       price: 15,
-      isAvailable: true
+      isAvailable: true,
+      locations: [
+        {
+          id: "loc-3",
+          locationName: "من مطار شرم الشيخ الدولي إلى الفندق",
+          vehicles: [
+            { id: "v6", vehicleType: "هايس سياحي (HiAce - 14 مقعد)", pricePerSeat: 200 },
+            { id: "v7", vehicleType: "سيارة ملاكي سدان (Sedan)", pricePerSeat: 300 }
+          ]
+        }
+      ]
     },
-    availabilityPeriods: []
+    availabilityPeriods: [
+      {
+        id: "p3",
+        startDate: "2026-08-01",
+        endDate: "2026-08-31",
+        singlePrice: 2200,
+        doublePrice: 3100,
+        triplePrice: 4100,
+        singleAvailable: true,
+        doubleAvailable: true,
+        tripleAvailable: true
+      }
+    ]
   },
   {
     id: "hotel-3",
@@ -115,9 +179,9 @@ export const initialHotels: Hotel[] = [
     locationName: "طريق القرى، الممشى السياحي، الغردقة، مصر",
     locationMapUrl: "https://maps.google.com/maps?q=DoubleTree%20by%20Hilton%20Hurghada%20&t=&z=13&ie=UTF8&iwloc=&output=embed",
     roomTypes: [
-      { id: "single", name: "فردي", pricePerNight: 90, maxOccupancy: "شخص واحد" },
-      { id: "double", name: "ثنائية", pricePerNight: 130, maxOccupancy: "شخصين بالغين" },
-      { id: "triple", name: "ثلاثية", pricePerNight: 180, maxOccupancy: "3 أشخاص بالغين" }
+      { id: "single", name: "فردي", pricePerNight: 0, maxOccupancy: "شخص واحد" },
+      { id: "double", name: "ثنائية", pricePerNight: 0, maxOccupancy: "شخصين بالغين" },
+      { id: "triple", name: "ثلاثية", pricePerNight: 0, maxOccupancy: "3 أشخاص بالغين" }
     ],
     accommodationTypes: [
       { id: "a5", name: "إقامة شاملة (All Inclusive)", priceAddition: 0 },
@@ -127,9 +191,31 @@ export const initialHotels: Hotel[] = [
     transfers: {
       policy: "خدمة حافلة انتقالات جماعية مريحة من المطار إلى الفندق وبالعكس عند الطلب.",
       price: 12,
-      isAvailable: true
+      isAvailable: true,
+      locations: [
+        {
+          id: "loc-4",
+          locationName: "من مطار الغردقة الدولي إلى الفندق",
+          vehicles: [
+            { id: "v8", vehicleType: "هايس سياحي (HiAce - 14 مقعد)", pricePerSeat: 150 },
+            { id: "v9", vehicleType: "حافلة كوستر (Coaster - 24 مقعد)", pricePerSeat: 110 }
+          ]
+        }
+      ]
     },
-    availabilityPeriods: []
+    availabilityPeriods: [
+      {
+        id: "p4",
+        startDate: "2026-08-01",
+        endDate: "2026-08-31",
+        singlePrice: 1800,
+        doublePrice: 2400,
+        triplePrice: 3200,
+        singleAvailable: true,
+        doubleAvailable: true,
+        tripleAvailable: true
+      }
+    ]
   },
   {
     id: "hotel-4",
@@ -148,9 +234,9 @@ export const initialHotels: Hotel[] = [
     locationName: "شارع أبطال التحرير، أسوان، مصر",
     locationMapUrl: "https://maps.google.com/maps?q=Sofitel%20Legend%20Old%20Cataract%20Aswan&t=&z=13&ie=UTF8&iwloc=&output=embed",
     roomTypes: [
-      { id: "single", name: "فردي", pricePerNight: 280, maxOccupancy: "شخص واحد" },
-      { id: "double", name: "ثنائية", pricePerNight: 390, maxOccupancy: "شخصين بالغين" },
-      { id: "triple", name: "ثلاثية", pricePerNight: 550, maxOccupancy: "3 أشخاص بالغين" }
+      { id: "single", name: "فردي", pricePerNight: 0, maxOccupancy: "شخص واحد" },
+      { id: "double", name: "ثنائية", pricePerNight: 0, maxOccupancy: "شخصين بالغين" },
+      { id: "triple", name: "ثلاثية", pricePerNight: 0, maxOccupancy: "3 أشخاص بالغين" }
     ],
     accommodationTypes: [
       { id: "a7", name: "إقامة شاملة الإفطار الفاخر فقط", priceAddition: 0 },
@@ -160,8 +246,38 @@ export const initialHotels: Hotel[] = [
     transfers: {
       policy: "انتقالات خاصة بسيارة ليموزين فخمة من مطار أسوان أو محطة القطار مجاناً عند حجز الأجنحة.",
       price: 30,
-      isAvailable: true
+      isAvailable: true,
+      locations: [
+        {
+          id: "loc-5",
+          locationName: "من مطار أسوان إلى الفندق",
+          vehicles: [
+            { id: "v10", vehicleType: "سيارة ليموزين فاخرة (Mercedes Sedan)", pricePerSeat: 450 },
+            { id: "v11", vehicleType: "هايس سياحي V.I.P", pricePerSeat: 280 }
+          ]
+        },
+        {
+          id: "loc-6",
+          locationName: "من محطة قطار أسوان الرئيسية إلى الفندق",
+          vehicles: [
+            { id: "v12", vehicleType: "سيارة ملاكي سدان (Sedan)", pricePerSeat: 200 },
+            { id: "v13", vehicleType: "هايس سياحي (HiAce)", pricePerSeat: 140 }
+          ]
+        }
+      ]
     },
-    availabilityPeriods: []
+    availabilityPeriods: [
+      {
+        id: "p5",
+        startDate: "2026-08-01",
+        endDate: "2026-08-31",
+        singlePrice: 3500,
+        doublePrice: 4800,
+        triplePrice: 6200,
+        singleAvailable: true,
+        doubleAvailable: true,
+        tripleAvailable: true
+      }
+    ]
   }
 ];
